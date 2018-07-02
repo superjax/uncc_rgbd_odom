@@ -805,7 +805,7 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
     }
     
     keyframe_frameid_str = "";
-    cv::UMat depth_frame;
+    
     rgb = frame_in.clone();
 
     // Preprocess: Convert Kinect depth image from image-of-shorts (mm) to image-of-floats (m)
@@ -815,10 +815,10 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
         UNCC_DBG("Converting Kinect-style depth image to floating point depth image.");
         int width = depthimg.cols;
         int height = depthimg.rows;
-        depth_frame.create(height, width, CV_32F);
+        depth_frame_buffer.create(height, width, CV_32F);
         float bad_point = std::numeric_limits<float>::quiet_NaN();
         uint16_t* uint_depthvals = (uint16_t *) depthimg.getMat(cv::ACCESS_READ).data;
-        float* float_depthvals = (float *) depth_frame.getMat(cv::ACCESS_WRITE).data;
+        float* float_depthvals = (float *) depth_frame_buffer.getMat(cv::ACCESS_WRITE).data;
         for (int row = 0; row < height; ++row) {
             for (int col = 0; col < width; ++col) {
                 if (uint_depthvals[row * width + col] == 0) {
@@ -829,7 +829,7 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
             }
         }
     } else if (depthtype == CV_32F) {
-        depth_frame = depthimg;
+        depth_frame_buffer = depthimg.clone();
     } else {
         std::cout << "Error depth frame numeric format not recognized: " << depthtype << "." << std::endl;
         return false;
@@ -837,27 +837,26 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
   
     // Compute mask to ignore invalid depth measurements
     // Output: mask -- 0,1 map of invalid/valid (x,y) depth measurements
-    getImageFunctionProvider()->computeMask(depth_frame, mask);
+    getImageFunctionProvider()->computeMask(depth_frame_buffer, mask);
     
     // Smooth or Dither the Depth measurements to reduce noise
     // Output: depth_frame -- smoothed image
-    cv::UMat smoothed_depth_frame;
     switch (depth_processing) {
         case Depth_Processing::MOVING_AVERAGE:
-            imageFunctionProvider->movingAvgFilter(depth_frame, smoothed_depth_frame,
+            imageFunctionProvider->movingAvgFilter(depth_frame_buffer, smoothed_depth_frame_buffer,
                     keyframe_frameid_str);
-            smoothed_depth_frame.copyTo(depth_frame);
+            smoothed_depth_frame_buffer.copyTo(depth_frame_buffer);
             break;
         case Depth_Processing::DITHER:
-            imageFunctionProvider->ditherDepthAndSmooth(depth_frame, smoothed_depth_frame,
+            imageFunctionProvider->ditherDepthAndSmooth(depth_frame_buffer, smoothed_depth_frame_buffer,
                     keyframe_frameid_str);
-            smoothed_depth_frame.copyTo(depth_frame);
+            smoothed_depth_frame_buffer.copyTo(depth_frame_buffer);
             break;
         case Depth_Processing::NONE:
         default:
             break;
     }
-    depth = depth_frame.getMat(cv::ACCESS_READ).clone();
+    depth = depth_frame_buffer.getMat(cv::ACCESS_READ).clone();
     
     // Compute keypoint (x,y) locations and descriptors at each keypoint
     //             (x,y) location
@@ -924,20 +923,20 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
     //                         in the prior frame and the current frame.
     match_time = 0;
     double t = (double) cv::getTickCount();
-    std::vector<cv::DMatch> good_matches; // to obtain the 3D points of the model
+    good_matches_buffer.clear();
     if (fast_match) {
-        rmatcher->fastRobustMatch(good_matches, *reference_descriptors, *frame_descriptors);
+        rmatcher->fastRobustMatch(good_matches_buffer, *reference_descriptors, *frame_descriptors);
     } else {
-        rmatcher->robustMatch(good_matches, *reference_descriptors, *frame_descriptors);
+        rmatcher->robustMatch(good_matches_buffer, *reference_descriptors, *frame_descriptors);
     }
     UNCC_DBG("from (%lu,%lu) key points, found %lu good matches.\n", 
-             reference_keypoints->size(), frame_keypoints->size(), good_matches.size());
+             reference_keypoints->size(), frame_keypoints->size(), good_matches_buffer.size());
     // measure performance of matching algorithm
     match_time = (cv::getTickCount() - t) * 1000. / cv::getTickFrequency();
 
     // Preprocess: Stop execution unless enough matches exist to continue the algorithm.
-    numMatches = good_matches.size();
-    if (good_matches.size() < 6) {
+    numMatches = good_matches_buffer.size();
+    if (good_matches_buffer.size() < 6) {
         UNCC_DBG("Too few key point matches in the images! Bailing on image...");
         bad_frames++;
         return false;
@@ -962,7 +961,7 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
         // set roi to some rgb colour   
         pRoi.setTo(cv::Scalar(255, 255, 255));
 
-        cv::drawMatches(reference_rgb, *reference_keypoints, frame_rgb, *frame_keypoints, good_matches,
+        cv::drawMatches(reference_rgb, *reference_keypoints, frame_rgb, *frame_keypoints, good_matches_buffer,
                 matchImage, cv::Scalar::all(-1), cv::Scalar::all(-1),
                 std::vector<char>(), cv::DrawMatchesFlags::DEFAULT);
 
@@ -985,34 +984,29 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
     // Step 2: Compute 3D point cloud correspondences from the 2D feature correspondences
     //         Creates a PCL correspondence list indicating matches between points cloud points
     //         in the image pair for alignment/odometry computation
-    // Output: ptcloud_matches -- a PCL Correspondences list for using in alignment algorithms
-    std::vector<cv::Point2f> list_points2d_prior_match; // container for the model 2D coordinates found in the scene
-    std::vector<cv::Point2f> list_points2d_scene_match; // container for the model 2D coordinates found in the scene    
-    pcl::CorrespondencesPtr ptcloud_matches(new pcl::Correspondences());
-    for (unsigned int match_index = 0; match_index < good_matches.size(); ++match_index) {
+    // Output: ptcloud_matches -- a PCL Correspondences list for using in alignment algorithms  
+    ptcloud_matches->clear();
+    for (unsigned int match_index = 0; match_index < good_matches_buffer.size(); ++match_index) {
         //cv::Point2f point2d_prior = (*prior_keypoints)[ good_matches[match_index].queryIdx ].pt; // 2D point from model
         //cv::Point2f point2d_frame = (*keypoints_frame)[ good_matches[match_index].trainIdx ].pt; // 2D point from the scene
-        pcl::Correspondence correspondence(good_matches[match_index].trainIdx,
-                good_matches[match_index].queryIdx,
-                good_matches[match_index].distance);
+        pcl::Correspondence correspondence(good_matches_buffer[match_index].trainIdx,
+                good_matches_buffer[match_index].queryIdx,
+                good_matches_buffer[match_index].distance);
         ptcloud_matches->push_back(correspondence);
     }
 
     // Step 3: Estimate the best 3D transformation using RANSAC
     // Output: trans -- the best estimate of the odometry transform
     t = (double) cv::getTickCount();
-    pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZRGB>::Ptr ransac_rejector(
-            new pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZRGB>);
-    ransac_rejector->setInputSource(frame_ptcloud_sptr);
-    ransac_rejector->setInputTarget(reference_ptcloud_sptr);
-    ransac_rejector->setInlierThreshold(pcl_inlierThreshold);
-    ransac_rejector->setRefineModel(pcl_refineModel);
-    ransac_rejector->setInputCorrespondences(ptcloud_matches);
-    ransac_rejector->setMaximumIterations(pcl_numIterations);
-    pcl::CorrespondencesPtr ptcloud_matches_ransac(new pcl::Correspondences());
+    ransac_rejector.setInputSource(frame_ptcloud_sptr);
+    ransac_rejector.setInputTarget(reference_ptcloud_sptr);
+    ransac_rejector.setInlierThreshold(pcl_inlierThreshold);
+    ransac_rejector.setRefineModel(pcl_refineModel);
+    ransac_rejector.setInputCorrespondences(ptcloud_matches);
+    ransac_rejector.setMaximumIterations(pcl_numIterations);
     ptcloud_matches_ransac->clear();
-    ransac_rejector->getRemainingCorrespondences(*ptcloud_matches, *ptcloud_matches_ransac);
-    trans = ransac_rejector->getBestTransformation();
+    ransac_rejector.getRemainingCorrespondences(*ptcloud_matches, *ptcloud_matches_ransac);
+    trans = ransac_rejector.getBestTransformation();
     RANSAC_time = (cv::getTickCount() - t) * 1000. / cv::getTickFrequency();
     numInliers = ptcloud_matches_ransac->size();
     

@@ -64,7 +64,7 @@ public:
     reference_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
     LOG_ODOMETRY_TO_FILE(false),
     //COMPUTE_PTCLOUDS(false),
-    DUMP_MATCH_IMAGES(true),
+    DUMP_MATCH_IMAGES(false),
     DUMP_RAW_IMAGES(false),
     SHOW_ORB_vs_iGRaND(false),
     DIRECT_ODOM(false),
@@ -74,7 +74,10 @@ public:
     pcl_refineModel(true),
     pcl_numIterations(400),
     pcl_inlierThreshold(0.05),
-    numKeyPoints(600) {
+    numKeyPoints(600),
+    ptcloud_matches(new pcl::Correspondences),
+    ptcloud_matches_ransac(new pcl::Correspondences)
+    {
         bool useOpenCL;
         useOpenCL = false;
         std::string opencl_path = ".";
@@ -245,6 +248,14 @@ protected:
     cv::Ptr<cv::UMat> frame_descriptors;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr frame_ptcloud_sptr;
 
+    cv::UMat depth_frame_buffer;
+    cv::UMat smoothed_depth_frame_buffer;
+    std::vector<cv::DMatch> good_matches_buffer;
+    std::vector<cv::Point2f> list_points2d_prior_match;
+    pcl::CorrespondencesPtr ptcloud_matches;
+    pcl::CorrespondencesPtr ptcloud_matches_ransac;
+    pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZRGB> ransac_rejector;
+    std::vector<cv::Point2f> list_points2d_scene_match;
     cv::UMat reference_rgb;
     cv::Mat reference_depth;
     cv::UMat reference_mask;
