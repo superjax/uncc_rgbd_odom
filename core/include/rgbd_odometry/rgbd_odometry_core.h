@@ -56,9 +56,9 @@ public:
 
     RGBDOdometryCore() :
     imageFunctionProvider(new ImageFunctionProvider),
-    keypoints_frame(new std::vector<cv::KeyPoint>),
-    descriptors_frame(new cv::UMat),
-    pcl_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
+    frame_keypoints(new std::vector<cv::KeyPoint>),
+    frame_descriptors(new cv::UMat),
+    frame_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
     reference_keypoints(new std::vector<cv::KeyPoint>),
     reference_descriptors(new cv::UMat),
     reference_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
@@ -99,10 +99,15 @@ public:
 
     virtual ~RGBDOdometryCore() {
     }
-    bool preprocessImage(cv::UMat& frame, cv::UMat& depthimg,
-             float& detector_time, float& descriptor_time,
-             int& numFeatures);
+    bool preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
+                         std::string& keyframe_frameid_str, cv::UMat& rgb, cv::UMat& mask,
+                         cv::Mat& depth, cv::Ptr<std::vector<cv::KeyPoint> >& keypoints,
+                         cv::Ptr<cv::UMat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
+                         float& detector_time, float& descriptor_time, int& numFeatures);
 
+    bool setreferenceImage(cv::UMat& rgb, cv::UMat& depthimg, float& detector_time, 
+             float& descriptor_time, int& numfeatures);
+    
     bool computeRelativePose(cv::UMat& frame,
             cv::UMat& depthimg,
             Eigen::Matrix4f& trans,
@@ -136,17 +141,17 @@ public:
             std::string& name,
             cv::Ptr<cv::FeatureDetector> detector_,
             cv::Ptr<cv::DescriptorExtractor> extractor_,
-            cv::Ptr<std::vector<cv::KeyPoint> >& keypoints_frame,
-            cv::Ptr<cv::UMat>& descriptors_frame, float& detector_time, float& descriptor_time,
+            cv::Ptr<std::vector<cv::KeyPoint> >& frame_keypoints,
+            cv::Ptr<cv::UMat>& frame_descriptors, float& detector_time, float& descriptor_time,
             const std::string keyframe_frameid_str);
 
     bool estimateCovarianceBootstrap(pcl::CorrespondencesPtr ptcloud_matches_ransac,
-            cv::Ptr<std::vector<cv::KeyPoint> >& keypoints_frame,
+            cv::Ptr<std::vector<cv::KeyPoint> >& frame_keypoints,
             cv::Ptr<std::vector<cv::KeyPoint> >& reference_keypoints,
             Eigen::Matrix<float, 6, 6>& covMatrix,
             float &covarianceTime);
 
-    void swapOdometryBuffers();
+//    void swapOdometryBuffers();
 
     ImageFunctionProvider::Ptr getImageFunctionProvider() const {
         return imageFunctionProvider;
@@ -234,14 +239,14 @@ protected:
     int bad_frames = 0;
 
     cv::Mat frame_depth;
+    cv::UMat frame_rgb;
     cv::UMat frame_mask;
-    cv::UMat frame_vis;
     std::string keyframe_frameid_str;
-    cv::Ptr<std::vector<cv::KeyPoint> > keypoints_frame;
-    cv::Ptr<cv::UMat> descriptors_frame;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_ptcloud_sptr;
+    cv::Ptr<std::vector<cv::KeyPoint> > frame_keypoints;
+    cv::Ptr<cv::UMat> frame_descriptors;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr frame_ptcloud_sptr;
 
-    cv::UMat reference_image;
+    cv::UMat reference_rgb;
     cv::Mat reference_depth;
     cv::UMat reference_mask;
     cv::Ptr<std::vector<cv::KeyPoint> > reference_keypoints;
