@@ -209,7 +209,7 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat &frameA, cv::UMat &depthimgA
     float detectorTime, descriptorTime, matchTime, RANSACTime, covarianceTime;
     int numFeatures, numMatches, numInliers;
     
-    setreferenceImage(frameA, depthimgA, detectorTime, descriptorTime, numFeatures);
+    setReferenceImage(frameA, depthimgA);
 
     bool odomEstimatorSuccess = computeRelativePose(frameB, depthimgB,
             trans, covMatrix,
@@ -763,21 +763,30 @@ bool RGBDOdometryCore::estimateCovarianceBootstrap(pcl::CorrespondencesPtr ptclo
     return true;
 }
 
-//void RGBDOdometryCore::swapOdometryBuffers() {
-//    reference_rgb = frame_rgb.clone();
-//    reference_depth = frame_depth.clone();
-//    reference_keypoints.swap(frame_keypoints);
-//    frame_keypoints->clear();
-//    reference_descriptors.swap(frame_descriptors);
-//    frame_descriptors->release();
-//    reference_ptcloud_sptr.swap(frame_ptcloud_sptr);
-//    frame_ptcloud_sptr->clear();
-//}
+void RGBDOdometryCore::swapOdometryBuffers() {
+    reference_rgb = frame_rgb.clone();
+    reference_depth = frame_depth.clone();
+    reference_keypoints.swap(frame_keypoints);
+    frame_keypoints->clear();
+    reference_descriptors.swap(frame_descriptors);
+    frame_descriptors->release();
+    reference_ptcloud_sptr.swap(frame_ptcloud_sptr);
+    frame_ptcloud_sptr->clear();
+}
 
-bool RGBDOdometryCore::setreferenceImage(cv::UMat &rgb, cv::UMat &depthimg, float &detector_time, float &descriptor_time, int &numfeatures)
+bool RGBDOdometryCore::setReferenceImage(cv::UMat &rgb, cv::UMat &depthimg)
 {
-    return preprocessImage(rgb, depthimg, keyframe_frameid_str, reference_rgb, reference_mask, reference_depth, reference_keypoints, 
-                           reference_descriptors, reference_ptcloud_sptr, detector_time, descriptor_time, numfeatures);
+    float detector_time;
+    float descriptor_time;
+    int numfeatures;
+    if(preprocessImage(rgb, depthimg, keyframe_frameid_str, reference_rgb, reference_mask, reference_depth, reference_keypoints, 
+                           reference_descriptors, reference_ptcloud_sptr, detector_time, descriptor_time, numfeatures))
+    {
+        UNCC_DBG("Reference Image Set\n");
+        return true;
+    }
+    else
+        return false;
 }
 
 bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
@@ -870,6 +879,7 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
     // Output: pcl_ptcloud_sptr -- a 3D point cloud of the 3D surface locations at all detected keypoints
     UNCC_DBG("Found %lu key points in frame.",  keypoints->size());
     int i = 0;
+    ptcloud_sptr->clear();
     std::vector<cv::KeyPoint>::iterator keyptIterator;
     for (keyptIterator = keypoints->begin();
             keyptIterator != keypoints->end(); ++keyptIterator) {
@@ -895,7 +905,8 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
         Eigen::Matrix<float, 6, 6>& covMatrix,
         float& detector_time, float& descriptor_time, float& match_time,
         float& RANSAC_time, float& covarianceTime,
-        int& numFeatures, int& numMatches, int& numInliers) {
+        int& numFeatures, int& numMatches, int& numInliers) 
+{
     if (!preprocessImage(_frame, _depthimg, keyframe_frameid_str, frame_rgb, frame_mask,
                          frame_depth, frame_keypoints, frame_descriptors, frame_ptcloud_sptr,
                          detector_time, descriptor_time, numFeatures))

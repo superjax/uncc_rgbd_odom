@@ -68,7 +68,7 @@ public:
     DUMP_RAW_IMAGES(false),
     SHOW_ORB_vs_iGRaND(false),
     DIRECT_ODOM(false),
-    VERBOSE(true),
+    VERBOSE(false),
     fast_match(false),
     rmatcher(new RobustMatcher()),
     pcl_refineModel(true),
@@ -105,8 +105,7 @@ public:
                          cv::Ptr<cv::UMat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
                          float& detector_time, float& descriptor_time, int& numFeatures);
 
-    bool setreferenceImage(cv::UMat& rgb, cv::UMat& depthimg, float& detector_time, 
-             float& descriptor_time, int& numfeatures);
+    bool setReferenceImage(cv::UMat& rgb, cv::UMat& depthimg);
     
     bool computeRelativePose(cv::UMat& frame,
             cv::UMat& depthimg,
@@ -151,7 +150,7 @@ public:
             Eigen::Matrix<float, 6, 6>& covMatrix,
             float &covarianceTime);
 
-//    void swapOdometryBuffers();
+    void swapOdometryBuffers();
 
     ImageFunctionProvider::Ptr getImageFunctionProvider() const {
         return imageFunctionProvider;
