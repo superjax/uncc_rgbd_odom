@@ -59,16 +59,16 @@ public:
     keypoints_frame(new std::vector<cv::KeyPoint>),
     descriptors_frame(new cv::UMat),
     pcl_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
-    prior_keypoints(new std::vector<cv::KeyPoint>),
-    prior_descriptors_(new cv::UMat),
-    prior_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
+    reference_keypoints(new std::vector<cv::KeyPoint>),
+    reference_descriptors(new cv::UMat),
+    reference_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
     LOG_ODOMETRY_TO_FILE(false),
     //COMPUTE_PTCLOUDS(false),
-    DUMP_MATCH_IMAGES(false),
+    DUMP_MATCH_IMAGES(true),
     DUMP_RAW_IMAGES(false),
     SHOW_ORB_vs_iGRaND(false),
     DIRECT_ODOM(false),
-    VERBOSE(false),
+    VERBOSE(true),
     fast_match(false),
     rmatcher(new RobustMatcher()),
     pcl_refineModel(true),
@@ -99,6 +99,9 @@ public:
 
     virtual ~RGBDOdometryCore() {
     }
+    bool preprocessImage(cv::UMat& frame, cv::UMat& depthimg,
+             float& detector_time, float& descriptor_time,
+             int& numFeatures);
 
     bool computeRelativePose(cv::UMat& frame,
             cv::UMat& depthimg,
@@ -139,7 +142,7 @@ public:
 
     bool estimateCovarianceBootstrap(pcl::CorrespondencesPtr ptcloud_matches_ransac,
             cv::Ptr<std::vector<cv::KeyPoint> >& keypoints_frame,
-            cv::Ptr<std::vector<cv::KeyPoint> >& prior_keypoints,
+            cv::Ptr<std::vector<cv::KeyPoint> >& reference_keypoints,
             Eigen::Matrix<float, 6, 6>& covMatrix,
             float &covarianceTime);
 
@@ -227,16 +230,24 @@ protected:
     ImageFunctionProvider::Ptr imageFunctionProvider;
     // class to provide depth image processing functions
     Depth_Processing depth_processing;
+    
+    int bad_frames = 0;
 
-
+    cv::Mat frame_depth;
+    cv::UMat frame_mask;
+    cv::UMat frame_vis;
+    std::string keyframe_frameid_str;
     cv::Ptr<std::vector<cv::KeyPoint> > keypoints_frame;
     cv::Ptr<cv::UMat> descriptors_frame;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_ptcloud_sptr;
 
-    cv::UMat prior_image;
-    cv::Ptr<std::vector<cv::KeyPoint> > prior_keypoints;
-    cv::Ptr<cv::UMat> prior_descriptors_;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr prior_ptcloud_sptr;
+    cv::UMat reference_image;
+    cv::Mat reference_depth;
+    cv::UMat reference_mask;
+    cv::Ptr<std::vector<cv::KeyPoint> > reference_keypoints;
+    cv::Ptr<cv::UMat> reference_descriptors;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr reference_ptcloud_sptr;
+    
 public:
     bool LOG_ODOMETRY_TO_FILE;
     //bool COMPUTE_PTCLOUDS;
