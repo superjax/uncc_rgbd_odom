@@ -72,8 +72,8 @@ void RobustMatcher::symmetryTest(const std::vector<std::vector<cv::DMatch> >& ma
 }
 
 void RobustMatcher::robustMatch(std::vector<cv::DMatch>& good_matches,
-        const cv::UMat& descriptors_frame,
-        const cv::UMat& descriptors_model) {
+        const cv::Mat& descriptors_frame,
+        const cv::Mat& descriptors_model) {
 
     // 2. Match the image descriptors
     std::vector<std::vector<cv::DMatch> > matches12, matches21;
@@ -96,8 +96,8 @@ void RobustMatcher::robustMatch(std::vector<cv::DMatch>& good_matches,
 }
 
 void RobustMatcher::fastRobustMatch(std::vector<cv::DMatch>& good_matches,
-        const cv::UMat& descriptors_frame,
-        const cv::UMat& descriptors_model) {
+        const cv::Mat& descriptors_frame,
+        const cv::Mat& descriptors_model) {
     good_matches.clear();
 
     // 2. Match the image descriptors

@@ -37,7 +37,7 @@ void draw2DPoints(cv::InputOutputArray image, std::vector<cv::Point2f> &list_poi
     }
 }
 
-void draw2DKeyPoints(cv::UMat image, std::vector<cv::KeyPoint> &keypoints, cv::Scalar color) {
+void draw2DKeyPoints(cv::Mat image, std::vector<cv::KeyPoint> &keypoints, cv::Scalar color) {
     int radius;
     for (size_t i = 0; i < keypoints.size(); i++) {
         cv::Point2f point_2d = keypoints[i].pt;
@@ -180,7 +180,7 @@ static bool inImage(const float& px, const float& py, const float& height, const
 //fs.release(); 
 //}
 
-bool RGBDOdometryCore::computeRelativePose(cv::UMat &frame, cv::UMat &depthimg,
+bool RGBDOdometryCore::computeRelativePose(cv::Mat &frame, cv::Mat &depthimg,
         Eigen::Matrix4f& trans, Eigen::Matrix<float, 6, 6>& covMatrix) {
     float detectorTime, descriptorTime, matchTime, RANSACTime, covarianceTime;
     int numFeatures, numMatches, numInliers;
@@ -203,8 +203,8 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat &frame, cv::UMat &depthimg,
     return odomEstimatorSuccess;
 }
 
-bool RGBDOdometryCore::computeRelativePose(cv::UMat &frameA, cv::UMat &depthimgA,
-        cv::UMat &frameB, cv::UMat &depthimgB,
+bool RGBDOdometryCore::computeRelativePose(cv::Mat &frameA, cv::Mat &depthimgA,
+        cv::Mat &frameB, cv::Mat &depthimgB,
         Eigen::Matrix4f& trans, Eigen::Matrix<float, 6, 6>& covMatrix) {
     float detectorTime, descriptorTime, matchTime, RANSACTime, covarianceTime;
     int numFeatures, numMatches, numInliers;
@@ -578,12 +578,12 @@ bool RGBDOdometryCore::computeRelativePoseDirect(
 
 }
 
-int RGBDOdometryCore::computeKeypointsAndDescriptors(cv::UMat& frame, cv::Mat& dimg, cv::UMat& mask,
+int RGBDOdometryCore::computeKeypointsAndDescriptors(cv::Mat& frame, cv::Mat& dimg, cv::Mat& mask,
         std::string& name,
         cv::Ptr<cv::FeatureDetector> detector_,
         cv::Ptr<cv::DescriptorExtractor> extractor_,
         cv::Ptr<std::vector<cv::KeyPoint> >& keypoints_frame,
-        cv::Ptr<cv::UMat>& descriptors_frame, float& detector_time, float& descriptor_time,
+        cv::Ptr<cv::Mat>& descriptors_frame, float& detector_time, float& descriptor_time,
         const std::string keyframe_frameid_str) {
 #ifdef HAVE_iGRAND
     if (cv::iGRAND * iGRAND_detector = rmatcher->detector_.dynamicCast<cv::iGRAND>()) {
@@ -603,9 +603,9 @@ int RGBDOdometryCore::computeKeypointsAndDescriptors(cv::UMat& frame, cv::Mat& d
             keyptIterator != keypoints_frame->end(); /*++keyptIterator*/) {
         cv::KeyPoint kpt = *keyptIterator;
         int offset = (round(kpt.pt.y) * dimg.cols + round(kpt.pt.x));
-        if (((int) mask.getMat(cv::ACCESS_READ).data[offset]) == 0) {
-            //float depth = ((float *) depth_frame.getMat(cv::ACCESS_READ).data)[offset];
-            //                std::cout << "mask = " << ((int) mask.getMat(cv::ACCESS_READ).data[offset])
+        if (((int) mask.data[offset]) == 0) {
+            //float depth = ((float *) depth_frame.data)[offset];
+            //                std::cout << "mask = " << ((int) mask.data[offset])
             //                        << " depth = " << depth << std::endl;
             // key point found that lies in/too close to the masked region!!
             keyptIterator = keypoints_frame->erase(keyptIterator);
@@ -617,7 +617,7 @@ int RGBDOdometryCore::computeKeypointsAndDescriptors(cv::UMat& frame, cv::Mat& d
 
     //printf("execution time = %dms\n", (int) (t * 1000. / cv::getTickFrequency()));
     if (SHOW_ORB_vs_iGRaND) {
-        cv::UMat frame_vis = frame.clone(); // refresh visualization frame
+        cv::Mat frame_vis = frame.clone(); // refresh visualization frame
         if (name.compare("ORB") == 0) {
             cv::Scalar red(0, 0, 255); // BGR order
             draw2DKeyPoints(frame_vis, *keypoints_frame, red);
@@ -774,7 +774,7 @@ void RGBDOdometryCore::swapOdometryBuffers() {
     frame_ptcloud_sptr->clear();
 }
 
-bool RGBDOdometryCore::setReferenceImage(cv::UMat &rgb, cv::UMat &depthimg)
+bool RGBDOdometryCore::setReferenceImage(cv::Mat &rgb, cv::Mat &depthimg)
 {
     float detector_time;
     float descriptor_time;
@@ -789,10 +789,10 @@ bool RGBDOdometryCore::setReferenceImage(cv::UMat &rgb, cv::UMat &depthimg)
         return false;
 }
 
-bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
-        std::string& keyframe_frameid_str, cv::UMat& rgb, cv::UMat& mask,
+bool RGBDOdometryCore::preprocessImage(cv::Mat& frame_in, cv::Mat& depthimg,
+        std::string& keyframe_frameid_str, cv::Mat& rgb, cv::Mat& mask,
         cv::Mat& depth, cv::Ptr<std::vector<cv::KeyPoint> >& keypoints,
-        cv::Ptr<cv::UMat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
+        cv::Ptr<cv::Mat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
         float& detector_time, float& descriptor_time, int& numFeatures)
 {
     if (!hasRGBCameraIntrinsics()) {
@@ -810,15 +810,15 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
 
     // Preprocess: Convert Kinect depth image from image-of-shorts (mm) to image-of-floats (m)
     // Output: depth_frame -- a CV_32F (single float) depth image with units meters
-    uchar depthtype = depthimg.getMat(cv::ACCESS_READ).type() & CV_MAT_DEPTH_MASK;
+    uchar depthtype = depthimg.type() & CV_MAT_DEPTH_MASK;
     if (depthtype == CV_16U) {
         UNCC_DBG("Converting Kinect-style depth image to floating point depth image.");
         int width = depthimg.cols;
         int height = depthimg.rows;
         depth_frame_buffer.create(height, width, CV_32F);
         float bad_point = std::numeric_limits<float>::quiet_NaN();
-        uint16_t* uint_depthvals = (uint16_t *) depthimg.getMat(cv::ACCESS_READ).data;
-        float* float_depthvals = (float *) depth_frame_buffer.getMat(cv::ACCESS_WRITE).data;
+        uint16_t* uint_depthvals = (uint16_t *) depthimg.data;
+        float* float_depthvals = (float *) depth_frame_buffer.data;
         for (int row = 0; row < height; ++row) {
             for (int col = 0; col < width; ++col) {
                 if (uint_depthvals[row * width + col] == 0) {
@@ -856,7 +856,7 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
         default:
             break;
     }
-    depth = depth_frame_buffer.getMat(cv::ACCESS_READ).clone();
+    depth = depth_frame_buffer.clone();
     
     // Compute keypoint (x,y) locations and descriptors at each keypoint
     //             (x,y) location
@@ -884,7 +884,7 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
             keyptIterator != keypoints->end(); ++keyptIterator) {
         cv::KeyPoint kpt = *keyptIterator;
         pcl::PointXYZRGB pt;
-        pt = convertRGBD2XYZ(kpt.pt, rgb.getMat(cv::ACCESS_READ),
+        pt = convertRGBD2XYZ(kpt.pt, rgb,
                 depth, rgbCamera_Kmatrix);
         //std::cout << "Added point (" << pt.x << ", " << pt.y << ", " << pt.z << ")" << std::endl;
         ptcloud_sptr->push_back(pt);
@@ -893,13 +893,13 @@ bool RGBDOdometryCore::preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
             int offset = (round(kpt.pt.y) * depth.cols + round(kpt.pt.x));
             printf("ERROR found NaN in 3D measurement data %d : 2d (x,y)=(%f,%f)  mask(x,y)=%d (x,y,z)=(%f,%f,%f)\n",
                     i++, kpt.pt.x, kpt.pt.y,
-                    mask.getMat(cv::ACCESS_READ).data[offset],
+                    mask.data[offset],
                     pt.x, pt.y, pt.z);
         }
     }   
 }
 
-bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg,
+bool RGBDOdometryCore::computeRelativePose(cv::Mat& _frame, cv::Mat& _depthimg,
         Eigen::Matrix4f& trans,
         Eigen::Matrix<float, 6, 6>& covMatrix,
         float& detector_time, float& descriptor_time, float& match_time,
@@ -944,8 +944,8 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
 
     // DEBUG: code to show keypoint matches for each image pair
     if (DUMP_MATCH_IMAGES && !reference_rgb.empty()) {
-        cv::UMat matchImage;
-        cv::Mat pImage = reference_rgb.getMat(cv::ACCESS_WRITE);
+        cv::Mat matchImage;
+        cv::Mat pImage = reference_rgb;
         //std::cout << "priorImg(x,y)=(" << pImage.cols << ", " << pImage.rows << ")" << std::endl;
         // select a region of interest
         cv::Mat pRoi = pImage(cv::Rect(620, 0, 20, 480));
@@ -953,7 +953,7 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
         // set roi to some rgb colour   
         pRoi.setTo(cv::Scalar(255, 255, 255));
 
-        pImage = frame_rgb.getMat(cv::ACCESS_WRITE);
+        pImage = frame_rgb;
         // select a region of interest
         //std::cout << "priorImg2(x,y)=(" << pImage2.cols << ", " << pImage2.rows << ")" << std::endl;
         pRoi = pImage(cv::Rect(0, 0, 20, 480));
@@ -1038,9 +1038,9 @@ bool RGBDOdometryCore::computeRelativePose(cv::UMat& _frame, cv::UMat& _depthimg
                 //                draw2DPoints(frame_vis, list_points2d_model_match, blue);
                 //                draw2DPoints(depth_frame, list_points2d_model_match, blue);
                 //                draw2DPoints(mask, list_points2d_model_match, blue);
-                cv::UMat frame_vis = frame_rgb.clone();
+                cv::Mat frame_vis = frame_rgb.clone();
                 cv::Mat frame_depth_vis = frame_depth.clone();
-                cv::UMat frame_mask_vis = frame_mask.clone();
+                cv::Mat frame_mask_vis = frame_mask.clone();
                 draw2DPoints(frame_vis, list_points2d_scene_match, red);
                 draw2DPoints(frame_depth_vis, list_points2d_scene_match, red);
                 draw2DPoints(frame_mask_vis, list_points2d_scene_match, red);

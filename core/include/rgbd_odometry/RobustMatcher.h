@@ -129,13 +129,13 @@ public:
 
     // Match feature points using ratio and symmetry test
     void robustMatch(std::vector<cv::DMatch>& good_matches,
-            const cv::UMat& descriptors_frame,
-            const cv::UMat& descriptors_model);
+            const cv::Mat& descriptors_frame,
+            const cv::Mat& descriptors_model);
 
     // Match feature points using ratio test
     void fastRobustMatch(std::vector<cv::DMatch>& good_matches,
-            const cv::UMat& descriptors_frame,
-            const cv::UMat& descriptors_model);
+            const cv::Mat& descriptors_frame,
+            const cv::Mat& descriptors_model);
 
     // pointer to the feature point detector object
     cv::Ptr<cv::FeatureDetector> detector_;

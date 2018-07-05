@@ -57,10 +57,10 @@ public:
     RGBDOdometryCore() :
     imageFunctionProvider(new ImageFunctionProvider),
     frame_keypoints(new std::vector<cv::KeyPoint>),
-    frame_descriptors(new cv::UMat),
+    frame_descriptors(new cv::Mat),
     frame_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
     reference_keypoints(new std::vector<cv::KeyPoint>),
-    reference_descriptors(new cv::UMat),
+    reference_descriptors(new cv::Mat),
     reference_ptcloud_sptr(new pcl::PointCloud<pcl::PointXYZRGB>),
     LOG_ODOMETRY_TO_FILE(false),
     //COMPUTE_PTCLOUDS(false),
@@ -102,28 +102,28 @@ public:
 
     virtual ~RGBDOdometryCore() {
     }
-    bool preprocessImage(cv::UMat& frame_in, cv::UMat& depthimg,
-                         std::string& keyframe_frameid_str, cv::UMat& rgb, cv::UMat& mask,
+    bool preprocessImage(cv::Mat& frame_in, cv::Mat& depthimg,
+                         std::string& keyframe_frameid_str, cv::Mat& rgb, cv::Mat& mask,
                          cv::Mat& depth, cv::Ptr<std::vector<cv::KeyPoint> >& keypoints,
-                         cv::Ptr<cv::UMat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
+                         cv::Ptr<cv::Mat>& descriptors, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& ptcloud_sptr,
                          float& detector_time, float& descriptor_time, int& numFeatures);
 
-    bool setReferenceImage(cv::UMat& rgb, cv::UMat& depthimg);
+    bool setReferenceImage(cv::Mat& rgb, cv::Mat& depthimg);
     
-    bool computeRelativePose(cv::UMat& frame,
-            cv::UMat& depthimg,
+    bool computeRelativePose(cv::Mat& frame,
+            cv::Mat& depthimg,
             Eigen::Matrix4f& trans,
             Eigen::Matrix<float, 6, 6>& covMatrix,
             float& detector_time, float& descriptor_time, float& match_time,
             float& RANSAC_time, float& covarianceTime,
             int& numFeatures, int& numMatches, int& numInliers);
 
-    bool computeRelativePose(cv::UMat &frame, cv::UMat &depthimg,
+    bool computeRelativePose(cv::Mat &frame, cv::Mat &depthimg,
             Eigen::Matrix4f& trans,
             Eigen::Matrix<float, 6, 6>& covMatrix);
 
-    bool computeRelativePose(cv::UMat &frameA, cv::UMat &depthimgA,
-            cv::UMat &frameB, cv::UMat &depthimgB,
+    bool computeRelativePose(cv::Mat &frameA, cv::Mat &depthimgA,
+            cv::Mat &frameB, cv::Mat &depthimgB,
             Eigen::Matrix4f& trans,
             Eigen::Matrix<float, 6, 6>& covMatrix);
 
@@ -139,12 +139,12 @@ public:
             Eigen::Matrix4f& odometry_estimate, Eigen::Matrix<float, 6, 6>& covariance,
             int level, bool compute_image_gradients, int max_iterations);
 
-    int computeKeypointsAndDescriptors(cv::UMat& frame, cv::Mat& dimg, cv::UMat& mask,
+    int computeKeypointsAndDescriptors(cv::Mat& frame, cv::Mat& dimg, cv::Mat& mask,
             std::string& name,
             cv::Ptr<cv::FeatureDetector> detector_,
             cv::Ptr<cv::DescriptorExtractor> extractor_,
             cv::Ptr<std::vector<cv::KeyPoint> >& frame_keypoints,
-            cv::Ptr<cv::UMat>& frame_descriptors, float& detector_time, float& descriptor_time,
+            cv::Ptr<cv::Mat>& frame_descriptors, float& detector_time, float& descriptor_time,
             const std::string keyframe_frameid_str);
 
     bool estimateCovarianceBootstrap(pcl::CorrespondencesPtr ptcloud_matches_ransac,
@@ -244,26 +244,26 @@ protected:
     int bad_frames = 0;
 
     cv::Mat frame_depth;
-    cv::UMat frame_rgb;
-    cv::UMat frame_mask;
+    cv::Mat frame_rgb;
+    cv::Mat frame_mask;
     std::string keyframe_frameid_str;
     cv::Ptr<std::vector<cv::KeyPoint> > frame_keypoints;
-    cv::Ptr<cv::UMat> frame_descriptors;
+    cv::Ptr<cv::Mat> frame_descriptors;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr frame_ptcloud_sptr;
 
-    cv::UMat depth_frame_buffer;
-    cv::UMat smoothed_depth_frame_buffer;
+    cv::Mat depth_frame_buffer;
+    cv::Mat smoothed_depth_frame_buffer;
     std::vector<cv::DMatch> good_matches_buffer;
     std::vector<cv::Point2f> list_points2d_prior_match;
     pcl::CorrespondencesPtr ptcloud_matches;
     pcl::CorrespondencesPtr ptcloud_matches_ransac;
     pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZRGB> ransac_rejector;
     std::vector<cv::Point2f> list_points2d_scene_match;
-    cv::UMat reference_rgb;
+    cv::Mat reference_rgb;
     cv::Mat reference_depth;
-    cv::UMat reference_mask;
+    cv::Mat reference_mask;
     cv::Ptr<std::vector<cv::KeyPoint> > reference_keypoints;
-    cv::Ptr<cv::UMat> reference_descriptors;
+    cv::Ptr<cv::Mat> reference_descriptors;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr reference_ptcloud_sptr;
     
 public:
