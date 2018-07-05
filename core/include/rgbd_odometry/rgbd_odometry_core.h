@@ -158,6 +158,9 @@ public:
     ImageFunctionProvider::Ptr getImageFunctionProvider() const {
         return imageFunctionProvider;
     }
+	
+	cv::Mat& getConvertedDepthFrame() { return frame_depth;}
+	cv::Mat& getConvertedReferenceDepthFrame() { return reference_depth;}
 
     bool hasRGBCameraIntrinsics() {
         return rgbCamera_Kmatrix.rows == 3 && rgbCamera_Kmatrix.cols == 3;
