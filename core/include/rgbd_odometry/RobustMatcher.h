@@ -254,19 +254,19 @@ private:
 
         // FLANN - KDTree
         // trees = 5
-        cv::Ptr<cv::flann::IndexParams> index_params_32f = new cv::flann::KDTreeIndexParams(4);
+        cv::Ptr<cv::flann::IndexParams> index_params_32f = cv::Ptr<cv::flann::KDTreeIndexParams>(new cv::flann::KDTreeIndexParams(4));
         //index_params.setAlgorithm(cvflann::FLANN_INDEX_KDTREE);
         // int checks = 32, float eps = 0, bool sorted = true
-        cv::Ptr<cv::flann::SearchParams> search_params_32f = new cv::flann::SearchParams(32, 0, true);
+        cv::Ptr<cv::flann::SearchParams> search_params_32f = cv::Ptr<cv::flann::SearchParams>(new cv::flann::SearchParams(32, 0, true));
 
         // Fast Library Approximate Nearest Neighbor (FLANN) - LSH
         //                   table_number = 6, //# 12
         //                   key_size = 12,     //# 20
         //                   multi_probe_level = 1) //#2
-        cv::Ptr<cv::flann::IndexParams> index_params_8u = new cv::flann::LshIndexParams(6, 12, 1); //(20,10,2)
+        cv::Ptr<cv::flann::IndexParams> index_params_8u = cv::Ptr<cv::flann::IndexParams>(new cv::flann::LshIndexParams(6, 12, 1)); //(20,10,2)
         //cv::Ptr<cv::flann::IndexParams> index_params = new cv::flann::HierarchicalClusteringIndexParams();
         // int checks = 32, float eps = 0, bool sorted = true
-        cv::Ptr<cv::flann::SearchParams> search_params_8u = new cv::flann::SearchParams(32, 0, true);
+        cv::Ptr<cv::flann::SearchParams> search_params_8u = cv::Ptr<cv::flann::SearchParams>(new cv::flann::SearchParams(32, 0, true));
         std::string type;
         switch (algo->descriptorType()) {
             case CV_32F:
