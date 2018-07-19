@@ -786,7 +786,10 @@ bool RGBDOdometryCore::setReferenceImage(cv::Mat &rgb, cv::Mat &depthimg)
         return true;
     }
     else
+    {
+        UNCC_DBG("Unable to set Reference Image\n");
         return false;
+    }
 }
 
 bool RGBDOdometryCore::preprocessImage(cv::Mat& frame_in, cv::Mat& depthimg,
@@ -909,7 +912,10 @@ bool RGBDOdometryCore::computeRelativePose(cv::Mat& _frame, cv::Mat& _depthimg,
     if (!preprocessImage(_frame, _depthimg, keyframe_frameid_str, frame_rgb, frame_mask,
                          frame_depth, frame_keypoints, frame_descriptors, frame_ptcloud_sptr,
                          detector_time, descriptor_time, numFeatures))
+    {
+        UNCC_DBG("Image preprocessing failed");
         return false;
+    }
     
     // Stop execution if prior keypoints, descriptors or point cloud not available
     if (reference_keypoints->empty()) {
